@@ -1,0 +1,215 @@
+<html lang="en">
+    <head>
+    <meta name="referrer" content="no-referrer"/> 
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous"/>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.19/css/dataTables.bootstrap.min.css" type="text/css" integrity="sha384-VEpVDzPR2x8NbTDZ8NFW4AWbtT2g/ollEzX/daZdW/YvUBlbgVtsxMftnJ84k0Cn" crossorigin="anonymous"/>
+    <script src="https://code.jquery.com/jquery-3.3.1.js" integrity="sha384-fJU6sGmyn07b+uD1nMk7/iSb4yvaowcueiQhfVgQuD98rfva8mcr1eSvjchfpMrH" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min.js" integrity="sha384-rgWRqC0OFPisxlUvl332tiM/qmaNxnlY46eksSZD84t+s2vZlqGeHrncwIRX7CGp" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/1.10.19/js/dataTables.bootstrap.min.js" integrity="sha384-7PXRkl4YJnEpP8uU4ev9652TTZSxrqC8uOpcV1ftVEC7LVyLZqqDUAaq+Y+lGgr9" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <style>
+        .target:before {
+        content: "";
+        display: block;
+        height: 50px;
+        margin: -20px 0 0;
+        }
+        @media only screen and (min-width:1900px) {
+        .container {
+            width: 1800px;
+            }
+        }
+        .footer {
+        margin-top:60px;
+        padding-top:60px;
+        width: 100%;
+        height: 180px;
+        background-color: #f5f5f5;
+        }
+    </style>
+    <title>Scan Report</title>
+    </head>
+    <body>
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#"><span class="glyphicon glyphicon-home"></span></a>
+            </div>
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav">
+                <li><a href="#scannedhosts">Scanned Hosts</a></li>
+                <li><a href="#onlinehosts">Online Hosts</a></li>
+                <li><a href="#openservices">Open Services</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="jumbotron">
+            <h1>Scan Report<br/><small>Nmap</small></h1>
+            <pre style="white-space:pre-wrap; word-wrap:break-word;">{{ nmap.commandline }}</pre>
+            <p class="lead">
+                {{ nmap.startedstr }} – {{ nmap.endtimestr }}<br/>
+                {{ nmap.hosts_total }} hosts scanned.
+                {{ nmap.hosts_up }} hosts up.
+                {{ nmap.hosts_down }} hosts down.
+            </p>
+            <div class="progress">
+                <div class="progress-bar progress-bar-success" style="width: {{ nmap.hosts_up / nmap.hosts_total * 100 }}%">
+                {{ nmap.hosts_up }}
+                <span class="sr-only"></span>
+                </div>
+                <div class="progress-bar progress-bar-danger" style="width: {{ nmap.hosts_down / nmap.hosts_total * 100 }}%">
+                {{ nmap.hosts_down }}
+                <span class="sr-only"></span>
+                </div>
+            </div>
+        </div>
+        <h2 id="scannedhosts" class="target">Scanned Hosts</h2>
+        <div class="table-responsive">
+            <table id="table-overview" class="table table-striped dataTable" role="grid">
+                <thead>
+                <tr>
+                    <th>State</th>
+                    <th>Address</th>
+                    <th>Hostname</th>
+                    <th>Mac</th>
+                    <th>TCP (open)</th>
+                </tr>
+                </thead>
+                <tbody>
+                    {% for host in nmap.hosts %}
+                        <tr>
+                            <td>
+                                {% if host.is_up() %}
+                                    <span class="label label-success">up</span>
+                                {% else %}
+                                    <span class="label label-danger">down</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ host.address }}</td>
+                            <td>{{ host.hostnames[0] }}</td>
+                            <td>{{ host.mac }}</td>
+                            <td>{{ host.get_open_ports() | selectattr(1, "equalto", 'tcp') | list | count }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <script>
+        $(document).ready(function() {
+            $('#table-overview').DataTable( {
+                "order": [[ 0, "desc" ]]
+            } );
+        });
+        </script>
+        <h2 id="onlinehosts" class="target">Online Hosts</h2>
+        {% for host in nmap.hosts if host.is_up() %}
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                <h3 class="panel-title">{{ host.address }} - {{ host.hostnames[0] }}</h3>
+                </div>
+                <div class="panel-body">
+
+                    <h4>Hostnames</h4>
+                    <ul>
+                    {% for hostname in host.hostnames %}
+                        <li>{{ hostname }}</li>
+                    {% endfor %}
+                    </ul>
+
+                    <h4>Ports</h4>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Port</th>
+                                    <th>Protocol</th>
+                                    <th>State<br/>Reason</th>
+                                    <th>Service</th>
+                                    <th>Banner</th>
+                                    <th>CPE</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for service in host.services %}
+                                    {% if service.state == 'open' %}
+                                        <tr class="success">
+                                    {% elif service.state == 'filtered'%}
+                                        <tr class="warning">
+                                    {% elif service.state == 'closed'%}
+                                        <tr class="active">
+                                    {% else %}
+                                        <tr class="info">
+                                    {% endif %}
+                                            <td title="Port">{{ service.port }}</td>
+                                            <td title="Protocol">{{ service.protocol }}</td>
+                                            <td title="State / Reason">{{ service.state }}<br/>{{ service.reason }}</td>
+                                            <td title="Service">{{ service.service }}</td>
+                                            <td title="Banner">{{ service.banner }}</td>
+                                            <td title="CPE">{{ service.cpelist[0] }}</td>
+                                        </tr>
+                                    {% if service.open() %}
+                                        <tr>
+                                            <td colspan="7">
+                                            {% if service.cpelist[0] %}
+                                                <h5>CVE search from CPE: <a href="https://nvd.nist.gov/vuln/search/results?form_type=Advanced&amp;cves=on&amp;cpe_version={{ service.cpelist[0] }}">{{ service.cpelist[0] }}</a></h5>
+                                            {% endif %}
+                                            {% for script in service.scripts_results %}  
+                                                <h5>{{ script['id'] }}</h5>
+                                                <pre style="white-space:pre-wrap; word-wrap:break-word;">{{ script['output'] | e }}</pre>
+                                            {% endfor %}
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        <h2 id="openservices" class="target">Open Services</h2>
+        <div class="table-responsive">
+            <table id="table-services" class="table table-striped dataTable" role="grid">
+                <thead>
+                <tr>
+                    <th>Address</th>
+                    <th>Port</th>
+                    <th>Protocol</th>
+                    <th>Service</th>
+                    <th>Banner</th>
+                    <th>CPE</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for host in nmap.hosts %}
+                    {% for service in host.services if service.open() %}
+                        <tr>
+                            <td>{{ host.address }} - {{ host.hostnames[0] }}</td>
+                            <td title="Port">{{ service.port }}</td>
+                            <td title="Protocol">{{ service.protocol }}</td>
+                            <td title="Service">{{ service.service }}</td>
+                            <td title="Banner">{{ service.banner }}</td>
+                            <td title="CPE">{{ service.cpelist[0] }}</td>
+                        </tr>
+                    {% endfor %}
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <script>
+        $(document).ready(function() {
+            $('#table-services').DataTable();
+        });
+        </script>
+    </div>
+    </body>
+</html>
